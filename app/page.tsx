@@ -95,6 +95,7 @@ export function InputForm() {
 
   return (
     <>
+    <div>
       <div className="flex items-center h-screen w-full">
         <div className="w-1/2">
           <div className="text-center mb-10">
@@ -149,13 +150,13 @@ export function InputForm() {
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="w-1/2 flex justify-center">
-                      Register
+                      Create Account
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
                       <DialogTitle className="text-2xl font-bold">
-                        Register
+                        Create your account
                       </DialogTitle>
                       <DialogDescription>
                         Let's get you started! Fill in the form below to create your account.
@@ -207,7 +208,9 @@ export function InputForm() {
             </form>
           </Form>
         </div>
+
       </div>
+    </div>
     </>
   )
 }
