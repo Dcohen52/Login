@@ -1,39 +1,17 @@
-// app/api/auth/[...nextauth].ts
-import NextAuth from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
+import NextAuth from "next-auth"
+import EmailProvider from "next-auth/providers/email"
 
 export default NextAuth({
   providers: [
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        username: { label: "Username", type: "text" },
-        password: { label: "Password", type: "password" },
-      },
-      authorize: async (credentials) => {
-        if (credentials && credentials.username === "user" && credentials.password === "password") {
-          return { id: 1, name: "John Doe", email: "john@example.com" };
-        }
-        return null;
-      },
+    EmailProvider({
+      server: process.env.EMAIL_SERVER,
+      from: process.env.EMAIL_FROM,
     }),
   ],
-  callbacks: {
-    jwt: async ({ token, user }) => {
-      if (user) {
-        token.id = user.id;
-      }
-      return token;
-    },
-    session: async ({ session, token }) => {
-      if (token) {
-        session.user.id = token.id;
-      }
-      return session;
-    },
-  },
   pages: {
-    signIn: '/signin',  // Specify your custom sign-in page path
-    error: '/signin',    // Specify your custom error page path
+    error: '/auth/error', // Redirect to this page in case of an error
   },
+}).catch((error: Error) => {
+  console.error('NextAuth error:', error);
 });
+
