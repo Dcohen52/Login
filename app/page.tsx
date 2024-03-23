@@ -3,7 +3,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -28,8 +27,19 @@ import { toast } from "@/components/ui/use-toast"
 import { signIn } from "next-auth/react";
 import { Label } from "@/components/ui/label"
 import { on } from "events"
-import { Toast } from "@radix-ui/react-toast"
+import { useToast } from "@/components/ui/use-toast"
 import { sign } from "crypto"
+import { useEffect, useState } from "react"
+
+
+type UserData = {
+  id: number;
+  username: string;
+  email: string;
+  password: string;
+  created_at: string;
+}
+
 
 const FormSchema = z.object({
   username: z.string().min(2, {
@@ -53,12 +63,24 @@ const RegisterSchema = z.object({
   password: z.string().min(6, {
     message: "Password must be at least 6 characters.",
   }).max(12, { message: "Password must be at most 12 characters." }),
-  confirmPassword: z.string().min(6, {
-    message: "Password must be at least 6 characters.",
-  }).max(12, { message: "Password must be at most 12 characters." }),
+  confirmPassword: z.string(),
 });
 
 export function InputForm() {
+
+  // State to store user data
+  const [users, setUsers] = useState<UserData[]>([]);
+
+  // Fetch user data
+  useEffect(() => {
+    fetch("http://localhost:3001/users")
+      .then((res) => res.json())
+      .then((data) => {
+        setUsers(data);
+      });
+  }
+    , []);
+
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -80,25 +102,79 @@ export function InputForm() {
 
   const onRegister = (data: z.infer<typeof RegisterSchema>) => {
     if (data.password !== data.confirmPassword) {
-      alert(`Passwords do not match: ${data.password} !== ${data.confirmPassword}`);
+      toast({
+        title: "Password mismatch",
+        description: "The password and confirm password do not match.",
+        variant: "destructive",
+      });
     } else {
-      alert(JSON.stringify(data, null, 2));
+      // Send a POST request to the /register endpoint
+      fetch("http://localhost:3001/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          username: data.username,
+          password: data.password,
+        }),
+      })
+        .then((response) => response.json())
+        .then((result) => {
+          if (result.error) {
+            toast({
+              title: "Registration Failed",
+              description: result.error,
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Account Created",
+              description: "Your account has been created successfully.",
+            });
+          }
+        })
+        .catch((error) => {
+          toast({
+            title: "Error",
+            description: "An error occurred during registration.",
+            variant: "destructive",
+          });
+        });
     }
   };
 
+
   function onSubmit(data: z.infer<typeof FormSchema>) {
-    if (data.username === "admin" && data.password === "admin123") {
-      alert(JSON.stringify(data, null, 2)	);
-      signIn("credentials", {
-        username: data.username,
-        password: data.password,
-        callbackUrl: "/",
+    signIn("credentials", {
+      username: data.username,
+      password: data.password,
+      callbackUrl: "/",
+    }).then((res) => {
+      if (res?.error) {
+        toast({
+          title: "Error",
+          description: res.error,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: `Welcome back, ${data.username}!`,
+        });
+      }
+    }).catch((error) => {
+      toast({
+        title: "Error",
+        description: "An error occurred during sign in.",
+        variant: "destructive",
       });
-      
-    } else {
-      alert("Invalid credentials");
-    }
+    });
   }
+
+
 
   return (
     <>
@@ -261,8 +337,18 @@ export function InputForm() {
               </form>
             </Form>
           </div>
-
         </div>
+      </div>
+      <div>
+        <h2>User Data</h2>
+        <ul>
+          {users.map((user) => (
+            <li key={user.id}>
+              <p>{user.username}</p>
+              <p>{user.email}</p>
+            </li>
+          ))}
+        </ul>
       </div>
     </>
   )
