@@ -10,6 +10,7 @@ app.use(cors());
 app.use(express.json());
 const port = process.env.PORT || 3001;
 
+const bcrypt = require('bcrypt');
 // const pool = new Pool({
 //   user: process.env.DB_USER,
 //   host: process.env.DB_HOST,
@@ -25,9 +26,6 @@ const pool = new Pool({
   password: "56041361Dc",
   port: 5432,
 });
-
-
-console.log(process.env.DB_USER, process.env.DB_HOST, process.env.DB_NAME, process.env.DB_PORT);
 
 app.get('/api', (req, res) => {
   res.status(200).json({ message: 'Server is working' });
@@ -55,13 +53,15 @@ app.get('/users/:id', async (req, res) => {
   }
 });
 
+
+
 app.post('/register', async (req, res) => {
-  console.log(req.body); // Log the request body
   try {
     const { name, username, email, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
     const { rows } = await pool.query(
       'INSERT INTO users (name, username, email, password) VALUES ($1, $2, $3, $4) RETURNING *',
-      [name, username, email, password]
+      [name, username, email, hashedPassword]
     );
     res.status(201).json(rows);
   } catch (error) {
@@ -69,6 +69,27 @@ app.post('/register', async (req, res) => {
     res.status(500).json({ error: `Error inserting data: ${error}` });
   }
 });
+
+app.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (rows.length === 0) {
+      return res.status(400).json({ message: 'Invalid email or password' });
+    }
+    const user = rows[0];
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).json({ message: 'Invalid email or password' });
+    }
+    
+    res.status(200).json(user);
+  } catch (error) {
+    console.error('Error logging in:', error);
+    res.status(500).json({ error: `Error logging in: ${error}` });
+  }
+}
+);
 
 
 app.listen(port, () => {

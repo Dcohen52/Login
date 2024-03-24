@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -26,14 +25,11 @@ import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/use-toast"
 import { signIn } from "next-auth/react";
 import { Label } from "@/components/ui/label"
-import { on } from "events"
-import { useToast } from "@/components/ui/use-toast"
-import { sign } from "crypto"
 import { useEffect, useState } from "react"
 
 
 type UserData = {
-  id: number;
+  uuid: string;
   username: string;
   email: string;
   password: string;
@@ -42,8 +38,8 @@ type UserData = {
 
 
 const FormSchema = z.object({
-  username: z.string().min(2, {
-    message: "Username must be at least 2 characters.",
+  email: z.string().email({
+    message: "Please enter a valid email address.",
   }),
   password: z.string().min(6, {
     message: "Password must be at least 6 characters.",
@@ -84,7 +80,7 @@ export function InputForm() {
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
@@ -147,32 +143,43 @@ export function InputForm() {
   };
 
 
+
+  // THE ISSUE IS HERE
   function onSubmit(data: z.infer<typeof FormSchema>) {
-    signIn("credentials", {
-      username: data.username,
-      password: data.password,
-      callbackUrl: "/",
-    }).then((res) => {
-      if (res?.error) {
+    fetch("http://localhost:3001/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+      .then((response) => response.json())
+      .then((result) => {
+        if (result.message) {
+          // If there is a message, it's an error
+          toast({
+            title: "Login Failed",
+            description: result.message,
+            variant: "destructive",
+          });
+        } else {
+          // Otherwise, login is successful
+          toast({
+            title: "Login Successful",
+            description: "You have been logged in successfully.",
+          });
+        }
+      })
+      .catch((error) => {
         toast({
           title: "Error",
-          description: res.error,
+          description: "An error occurred during login.",
           variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Success",
-          description: `Welcome back, ${data.username}!`,
-        });
-      }
-    }).catch((error) => {
-      toast({
-        title: "Error",
-        description: "An error occurred during sign in.",
-        variant: "destructive",
       });
-    });
   }
+
+
 
 
 
@@ -195,13 +202,14 @@ export function InputForm() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="w-96 mx-auto space-y-6">
                 <FormField
                   control={form.control}
-                  name="username"
+                  name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Username</FormLabel>
+                      <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="Username" {...field} />
+                        <Input placeholder="Email" {...field} />
                       </FormControl>
+                      <FormMessage>{form.formState.errors.email?.message}</FormMessage>
                     </FormItem>
                   )}
                 />
@@ -214,6 +222,7 @@ export function InputForm() {
                       <FormControl>
                         <Input type="password" placeholder="Password" {...field} />
                       </FormControl>
+                      <FormMessage>{form.formState.errors.password?.message}</FormMessage>
                     </FormItem>
                   )}
                 />
@@ -266,13 +275,13 @@ export function InputForm() {
                 </div>
                 <div>
                   <div className="grid grid-cols-3 gap-4">
-                    <Button className="w-full flex justify-center" variant="outline" onClick={() => signIn("google")}>
+                    <Button className="w-full flex justify-center" variant="outline" onClick={() => signIn("google")} disabled={true}>
                       <img src="/google.svg" alt="google" className="w-5 h-5" />
                     </Button>
-                    <Button className="w-full flex justify-center" variant="outline" onClick={() => signIn("apple")}>
+                    <Button className="w-full flex justify-center" variant="outline" onClick={() => signIn("apple")}  disabled={true}>
                       <img src="/apple.svg" alt="apple" className="w-4 h-5" />
                     </Button>
-                    <Button className="w-full flex justify-center" variant="outline" onClick={() => signIn("facebook")}>
+                    <Button className="w-full flex justify-center" variant="outline" onClick={() => signIn("facebook")}  disabled={true}>
                       <img src="/facebook.png" alt="facebook" className="w-2 h-4" />
                     </Button>
                   </div>
@@ -340,15 +349,6 @@ export function InputForm() {
         </div>
       </div>
       <div>
-        <h2>User Data</h2>
-        <ul>
-          {users.map((user) => (
-            <li key={user.id}>
-              <p>{user.username}</p>
-              <p>{user.email}</p>
-            </li>
-          ))}
-        </ul>
       </div>
     </>
   )

@@ -10,6 +10,9 @@ Run a container from the PostgreSQL image with the following command. This will 
 ``` powershell
 docker run --name my_postgres -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 -d postgres
 ```
+
+docker run --name login_test_db -e POSTGRES_PASSWORD=56041361Dc -p 5432:5432 -d postgres
+
 3. Here's what each option does:
 
 --name my_postgres: Sets the name of the container to my_postgres.
